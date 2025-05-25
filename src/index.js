@@ -1,18 +1,56 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const multer = require('multer');
 const mysql = require("mysql");
+const cloudinary = require('cloudinary').v2;
 const bodyParser = require("body-parser");
 const app = express();
 app.use(cors());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json({ limit: "10mb" }));
+app.use(express.json());
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
+app.post('/upload/:projectId', upload.single('file'), (req, res) => {
+  const { buffer, originalname } = req.file;
+  const tipo = req.query.tipo === 'imagen' ? 'image' : 'document';
+  console.log('Archivo recibido:', req.file);
+
+  const stream = cloudinary.uploader.upload_stream(
+    {
+      resource_type: 'auto',
+      folder: `proyectos/${req.params.projectId}`,
+      public_id: originalname.split('.')[0],
+    },
+    (error, result) => {
+      if (error) return res.status(500).json({ error });
+      return res.json({
+        url: result.secure_url,
+        tipo: req.query.tipo,
+        nombre: req.file.originalname,
+      });
+    }
+  );
+
+  require('stream').Readable.from(buffer).pipe(stream);
+});
 
 const credentials = {
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
+  ssl: { rejectUnauthorized: true },
 };
 
 app.get("/", (req, res) => {

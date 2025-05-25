@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const mysql = require("mysql");
@@ -8,10 +9,10 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json({ limit: "10mb" }));
 
 const credentials = {
-  host: "localhost",
-  user: "root",
-  password: "1",
-  database: "usuarios",
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
 };
 
 app.get("/", (req, res) => {
@@ -100,5 +101,6 @@ app.delete("/api/usuarios/:id", (req, res) => {
   );
 });
 
+const PORT = process.env.PORT || 4000;
 
-app.listen(4000, () => console.log("hola soy el servidor"));
+app.listen(PORT, () => console.log("hola soy el servidor"));

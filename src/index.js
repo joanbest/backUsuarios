@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const multer = require('multer');
-const mysql = require("mysql");
+const mysql = require("mysql2");
 const cloudinary = require('cloudinary').v2;
 const bodyParser = require("body-parser");
 const app = express();

@@ -6,7 +6,10 @@ const mysql = require("mysql");
 const cloudinary = require('cloudinary').v2;
 const bodyParser = require("body-parser");
 const app = express();
-app.use(cors());
+app.use(cors({
+  origin: ['https://final-web-opal.vercel.app/login'],
+  credentials: true
+}));
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json({ limit: "10mb" }));
 app.use(express.json());
@@ -139,6 +142,6 @@ app.delete("/api/usuarios/:id", (req, res) => {
   );
 });
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 3306;
 
 app.listen(PORT, () => console.log("hola soy el servidor"));

@@ -7,7 +7,7 @@ const cloudinary = require('cloudinary').v2;
 const bodyParser = require("body-parser");
 const app = express();
 app.use(cors({
-  origin: ['https://final-web-opal.vercel.app/login'],
+  origin: ['https://final-web-opal.vercel.app'],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));

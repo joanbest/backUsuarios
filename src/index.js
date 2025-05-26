@@ -5,7 +5,9 @@ const multer = require('multer');
 const mysql = require("mysql2");
 const cloudinary = require('cloudinary').v2;
 const bodyParser = require("body-parser");
+
 const app = express();
+
 app.use(cors({
   origin: ['https://final-web-opal.vercel.app'],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
@@ -21,14 +23,117 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
+const pool = mysql.createPool({
+  host: process.env.DB_HOST,
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD,
+  database: process.env.DB_NAME,
+  port: process.env.DB_PORT, 
+  ssl: { rejectUnauthorized: true },
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0
+});
+
+app.get("/", (req, res) => {
+  res.send("Hola desde tu primera ruta de la API");
+});
+
+// LOGIN
+app.post("/api/login", (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).send("Faltan datos");
+  }
+
+  pool.query(
+    "SELECT nombre_usuario, rol FROM usuarios WHERE nombre_usuario = ? AND contrasena_usuario = ?",
+    [username, password],
+    (err, result) => {
+      if (err) {
+        console.error("Error en consulta MySQL:", err);
+        return res.status(500).send("Error en base de datos");
+      }
+      if (result.length > 0) {
+        res.status(200).send({
+          nombre_usuario: result[0].nombre_usuario,
+          rol: result[0].rol,
+        });
+      } else {
+        res.status(400).send("Usuario no existe");
+      }
+    }
+  );
+});
+
+// Obtener todos los usuarios
+app.get("/api/usuarios", (req, res) => {
+  pool.query("SELECT * FROM usuarios", (err, result) => {
+    if (err) return res.status(500).send("Error al obtener usuarios");
+    res.send(result);
+  });
+});
+
+// Crear nuevo usuario
+app.post("/api/usuarios", (req, res) => {
+  const { nombre_usuario, contrasena_usuario, rol } = req.body;
+  if (!nombre_usuario || !contrasena_usuario || !rol) {
+    return res.status(400).send("Faltan datos del usuario");
+  }
+
+  pool.query(
+    "INSERT INTO usuarios (nombre_usuario, contrasena_usuario, rol) VALUES (?, ?, ?)",
+    [nombre_usuario, contrasena_usuario, rol],
+    (err) => {
+      if (err) return res.status(500).send("Error al crear usuario");
+      res.sendStatus(200);
+    }
+  );
+});
+
+// Actualizar usuario
+app.put("/api/usuarios/:id", (req, res) => {
+  const { nombre_usuario, contrasena_usuario, rol } = req.body;
+  const { id } = req.params;
+
+  if (!nombre_usuario || !contrasena_usuario || !rol) {
+    return res.status(400).send("Faltan datos para actualizar");
+  }
+
+  pool.query(
+    "UPDATE usuarios SET nombre_usuario = ?, contrasena_usuario = ?, rol = ? WHERE id = ?",
+    [nombre_usuario, contrasena_usuario, rol, id],
+    (err) => {
+      if (err) return res.status(500).send("Error al actualizar usuario");
+      res.sendStatus(200);
+    }
+  );
+});
+
+// Eliminar usuario
+app.delete("/api/usuarios/:id", (req, res) => {
+  const { id } = req.params;
+
+  pool.query(
+    "DELETE FROM usuarios WHERE id = ?",
+    [id],
+    (err) => {
+      if (err) return res.status(500).send("Error al eliminar usuario");
+      res.sendStatus(200);
+    }
+  );
+});
+
+// Subida de archivos a Cloudinary
 app.post('/upload/:projectId', upload.single('file'), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No se recibió archivo' });
+  }
+
   const { buffer, originalname } = req.file;
-  const tipo = req.query.tipo === 'imagen' ? 'image' : 'document';
-  console.log('Archivo recibido:', req.file);
 
   const stream = cloudinary.uploader.upload_stream(
     {
@@ -37,11 +142,14 @@ app.post('/upload/:projectId', upload.single('file'), (req, res) => {
       public_id: originalname.split('.')[0],
     },
     (error, result) => {
-      if (error) return res.status(500).json({ error });
-      return res.json({
+      if (error) {
+        console.error("Error al subir a Cloudinary:", error);
+        return res.status(500).json({ error: 'Error al subir a Cloudinary' });
+      }
+      res.json({
         url: result.secure_url,
-        tipo: req.query.tipo,
-        nombre: req.file.originalname,
+        tipo: req.query.tipo || 'desconocido',
+        nombre: originalname,
       });
     }
   );
@@ -49,100 +157,8 @@ app.post('/upload/:projectId', upload.single('file'), (req, res) => {
   require('stream').Readable.from(buffer).pipe(stream);
 });
 
-const credentials = {
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASSWORD,
-  database: process.env.DB_NAME,
-  ssl: { rejectUnauthorized: true },
-};
+const PORT = process.env.PORT ;
 
-app.get("/", (req, res) => {
-  res.send("hola desde tu primera ruta de la Api");
+app.listen(PORT, () => {
+  console.log(`Servidor corriendo en puerto ${PORT}`);
 });
-
-// LOGIN
-app.post("/api/login", (req, res) => {
-  const { username, password } = req.body;
-  const values = [username, password];
-  const connection = mysql.createConnection(credentials);
-
-  connection.query(
-    "SELECT nombre_usuario, rol FROM usuarios WHERE nombre_usuario = ? AND contrasena_usuario = ?",
-    values,
-    (err, result) => {
-      if (err) {
-        console.error("Error en consulta MySQL:", err);
-        res.status(500).send(err);
-      } else {
-        if (result.length > 0) {
-          res.status(200).send({
-            nombre_usuario: result[0].nombre_usuario,
-            rol: result[0].rol,
-          });
-        } else {
-          res.status(400).send("Usuario no existe");
-        }
-      }
-      connection.end();
-    }
-  );
-});
-
-// Obtener todos los usuarios
-app.get("/api/usuarios", (req, res) => {
-  const connection = mysql.createConnection(credentials);
-  connection.query("SELECT * FROM usuarios", (err, result) => {
-    if (err) res.status(500).send(err);
-    else res.send(result);
-    connection.end();
-  });
-});
-
-// Crear nuevo usuario
-app.post("/api/usuarios", (req, res) => {
-  const { nombre_usuario, contrasena_usuario, rol } = req.body;
-  const connection = mysql.createConnection(credentials);
-  connection.query(
-    "INSERT INTO usuarios (nombre_usuario, contrasena_usuario, rol) VALUES (?, ?, ?)",
-    [nombre_usuario, contrasena_usuario, rol],
-    (err) => {
-      if (err) res.status(500).send(err);
-      else res.sendStatus(200);
-      connection.end();
-    }
-  );
-});
-
-// Actualizar usuario
-app.put("/api/usuarios/:id", (req, res) => {
-  const { nombre_usuario, contrasena_usuario, rol } = req.body;
-  const connection = mysql.createConnection(credentials);
-  connection.query(
-    "UPDATE usuarios SET nombre_usuario = ?, contrasena_usuario = ?, rol = ? WHERE id = ?",
-    [nombre_usuario, contrasena_usuario, rol, req.params.id],
-    (err) => {
-      if (err) res.status(500).send(err);
-      else res.sendStatus(200);
-      connection.end();
-    }
-  );
-});
-
-// Eliminar usuario
-app.delete("/api/usuarios/:id", (req, res) => {
-  const connection = mysql.createConnection(credentials);
-  connection.query(
-    "DELETE FROM usuarios WHERE id = ?",
-    [req.params.id],
-    (err) => {
-      if (err) res.status(500).send(err);
-      else res.sendStatus(200);
-      connection.end();
-    }
-  );
-});
-
-const PORT = process.env.PORT || 3306;
-
-app.listen(PORT, () => console.log("hola soy el servidor"));

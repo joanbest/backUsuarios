@@ -37,7 +37,7 @@ const pool = mysql.createPool({
   host: process.env.DB_HOST, // Cambiado de DB_HOST a MYSQL_HOST
   user: process.env.DB_USER, // Cambiado de DB_USER a MYSQL_USER
   password: process.env.DB_PASSWORD, // Cambiado de DB_PASSWORD a MYSQL_PASSWORD
-  database: process.env.DB_DATABASE, // Cambiado de DB_NAME a MYSQL_DATABASE
+  database: process.env.DB_NAME, // Cambiado de DB_NAME a MYSQL_DATABASE
   port: process.env.DB_PORT, // ¡MUY IMPORTANTE! Cambiado de DB_PORT a MYSQL_PORT (que es 3306)
   ssl: false, // Puedes considerar poner esto a true si la conexión es segura, pero false debería funcionar internamente en Railway
   waitForConnections: true,

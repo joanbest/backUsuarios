@@ -157,7 +157,7 @@ app.post('/upload/:projectId', upload.single('file'), (req, res) => {
   require('stream').Readable.from(buffer).pipe(stream);
 });
 
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT ;
 
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en puerto ${PORT}`);

@@ -31,7 +31,7 @@ const pool = mysql.createPool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
-  port: 3306,  // explícito para Railway MySQL
+  port: process.env.DB_PORT, 
   ssl: { rejectUnauthorized: true },
   waitForConnections: true,
   connectionLimit: 10,

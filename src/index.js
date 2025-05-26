@@ -34,7 +34,7 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 const pool = mysql.createPool({
-  host: process.env.MYSQL_HOST, // Cambiado de DB_HOST a MYSQL_HOST
+  host: process.env.DB_HOST, // Cambiado de DB_HOST a MYSQL_HOST
   user: process.env.MYSQL_USER, // Cambiado de DB_USER a MYSQL_USER
   password: process.env.MYSQL_PASSWORD, // Cambiado de DB_PASSWORD a MYSQL_PASSWORD
   database: process.env.MYSQL_DATABASE, // Cambiado de DB_NAME a MYSQL_DATABASE

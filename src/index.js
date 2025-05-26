@@ -51,6 +51,7 @@ app.post('/upload/:projectId', upload.single('file'), (req, res) => {
 
 const credentials = {
   host: process.env.DB_HOST,
+  port: 3306,
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
@@ -143,6 +144,6 @@ app.delete("/api/usuarios/:id", (req, res) => {
   );
 });
 
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 3306;
 
 app.listen(PORT, () => console.log("hola soy el servidor"));

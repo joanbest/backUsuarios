@@ -5,6 +5,7 @@ const multer = require('multer');
 const mysql = require("mysql2");
 const cloudinary = require('cloudinary').v2;
 const bodyParser = require("body-parser");
+const bcrypt = require('bcrypt');
 
 const app = express();
 
@@ -57,18 +58,23 @@ app.post("/api/login", (req, res) => {
   }
 
   pool.query(
-    "SELECT nombre_usuario, rol FROM usuarios WHERE nombre_usuario = ? AND contrasena_usuario = ?",
-    [username, password],
-    (err, result) => {
+    "SELECT nombre_usuario, contrasena_usuario, rol FROM usuarios WHERE nombre_usuario = ?",
+    [username],
+    async (err, result) => {
       if (err) {
         console.error("Error en consulta MySQL:", err);
         return res.status(500).send("Error en base de datos");
       }
       if (result.length > 0) {
-        res.status(200).send({
-          nombre_usuario: result[0].nombre_usuario,
-          rol: result[0].rol,
-        });
+        const match = await bcrypt.compare(password, result[0].contrasena_usuario);
+        if (match) {
+          res.status(200).send({
+            nombre_usuario: result[0].nombre_usuario,
+            rol: result[0].rol,
+          });
+        } else {
+          res.status(400).send("Contraseña incorrecta");
+        }
       } else {
         res.status(400).send("Usuario no existe");
       }
@@ -85,20 +91,25 @@ app.get("/api/usuarios", (req, res) => {
 });
 
 // Crear nuevo usuario
-app.post("/api/usuarios", (req, res) => {
+app.post("/api/usuarios", async (req, res) => {
   const { nombre_usuario, contrasena_usuario, rol } = req.body;
   if (!nombre_usuario || !contrasena_usuario || !rol) {
     return res.status(400).send("Faltan datos del usuario");
   }
 
-  pool.query(
-    "INSERT INTO usuarios (nombre_usuario, contrasena_usuario, rol) VALUES (?, ?, ?)",
-    [nombre_usuario, contrasena_usuario, rol],
-    (err) => {
-      if (err) return res.status(500).send("Error al crear usuario");
-      res.sendStatus(200);
-    }
-  );
+  try {
+    const hash = await bcrypt.hash(contrasena_usuario, 10);
+    pool.query(
+      "INSERT INTO usuarios (nombre_usuario, contrasena_usuario, rol) VALUES (?, ?, ?)",
+      [nombre_usuario, hash, rol],
+      (err) => {
+        if (err) return res.status(500).send("Error al crear usuario");
+        res.sendStatus(200);
+      }
+    );
+  } catch (err) {
+    res.status(500).send("Error al encriptar la contraseña");
+  }
 });
 
 // Actualizar usuario

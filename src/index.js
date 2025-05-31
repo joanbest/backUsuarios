@@ -35,12 +35,12 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 const pool = mysql.createPool({
-  host: process.env.DB_HOST, // Cambiado de DB_HOST a MYSQL_HOST
-  user: process.env.DB_USER, // Cambiado de DB_USER a MYSQL_USER
-  password: process.env.DB_PASSWORD, // Cambiado de DB_PASSWORD a MYSQL_PASSWORD
-  database: process.env.DB_NAME, // Cambiado de DB_NAME a MYSQL_DATABASE
-  port: process.env.DB_PORT, // ¡MUY IMPORTANTE! Cambiado de DB_PORT a MYSQL_PORT (que es 3306)
-  ssl: false, // Puedes considerar poner esto a true si la conexión es segura, pero false debería funcionar internamente en Railway
+  host: process.env.DB_HOST, 
+  user: process.env.DB_USER,
+  password: process.env.DB_PASSWORD, 
+  database: process.env.DB_NAME,
+  port: process.env.DB_PORT,
+  ssl: false,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
@@ -113,22 +113,26 @@ app.post("/api/usuarios", async (req, res) => {
 });
 
 // Actualizar usuario
-app.put("/api/usuarios/:id", (req, res) => {
+app.put("/api/usuarios/:id", async (req, res) => {
   const { nombre_usuario, contrasena_usuario, rol } = req.body;
   const { id } = req.params;
 
   if (!nombre_usuario || !contrasena_usuario || !rol) {
     return res.status(400).send("Faltan datos para actualizar");
   }
-
+try {
+    const hash = await bcrypt.hash(contrasena_usuario, 10);
   pool.query(
     "UPDATE usuarios SET nombre_usuario = ?, contrasena_usuario = ?, rol = ? WHERE id = ?",
-    [nombre_usuario, contrasena_usuario, rol, id],
+    [nombre_usuario, hash, rol, id],
     (err) => {
       if (err) return res.status(500).send("Error al actualizar usuario");
       res.sendStatus(200);
     }
   );
+} catch (err) {
+    res.status(500).send("Error al encriptar la contraseña");
+  }
 });
 
 // Eliminar usuario
